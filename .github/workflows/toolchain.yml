@@ -1,0 +1,26 @@
+name: Verify Linux toolchain
+on:
+  push:
+    paths: ['.github/workflows/toolchain.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch pinned build dependencies
+        run: |
+          mkdir tools && cd tools
+          npm init -y
+          npm install --ignore-scripts @esbuild/linux-x64@0.27.3 @rollup/rollup-linux-x64-gnu@4.60.0
+          tar -czf ../linux-build-tools.tar.gz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build-tools
+          path: linux-build-tools.tar.gz
+          retention-days: 2
