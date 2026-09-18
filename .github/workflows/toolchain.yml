@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   toolchain:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - uses: actions/setup-node@v4
@@ -23,4 +23,26 @@ jobs:
         with:
           name: linux-build-tools
           path: linux-build-tools.tar.gz
+          retention-days: 2
+      - name: Package isolated PostgreSQL test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(ls /usr/lib/postgresql | sort -V | tail -1)
+          test -n "$version"
+          mkdir -p runtime/usr/lib/postgresql runtime/usr/share/postgresql runtime/deps
+          cp -a /usr/lib/postgresql/$version runtime/usr/lib/postgresql/
+          cp -a /usr/share/postgresql/$version runtime/usr/share/postgresql/
+          find /usr/lib/postgresql/$version -type f \( -name '*.so' -o -path '*/bin/*' \) -print0 | xargs -0 -r ldd 2>/dev/null | awk '$2=="=>" && $3 ~ /^\// {print $3}' | sort -u > libs.txt || true
+          while read -r lib; do
+            base=$(basename "$lib")
+            case "$base" in libc.so.*|libm.so.*|libpthread.so.*|libdl.so.*|librt.so.*|libresolv.so.*|ld-linux*) continue;; esac
+            cp -L "$lib" runtime/deps/
+          done < libs.txt
+          echo "$version" > runtime/VERSION
+          tar -czf postgres-test-runtime.tar.gz -C runtime .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: postgres-test-runtime
+          path: postgres-test-runtime.tar.gz
           retention-days: 2
