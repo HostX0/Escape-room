@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix client && npm ci --prefix escape-room-backend",
+  "buildCommand": "npm run build --prefix client",
+  "outputDirectory": "client/dist",
+  "functions": {
+    "api/server.js": {
+      "maxDuration": 60,
+      "includeFiles": "escape-room-backend/assets/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/server" },
+    { "source": "/uploads/:path*", "destination": "/api/server" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Content-Type-Options", "value": "nosniff" },
+      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+      { "key": "X-Frame-Options", "value": "DENY" }
+    ] },
+    { "source": "/assets/(.*)", "headers": [
+      { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+    ] },
+    { "source": "/index.html", "headers": [
+      { "key": "Cache-Control", "value": "no-cache" }
+    ] }
+  ]
+}
