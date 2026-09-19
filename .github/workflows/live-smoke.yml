@@ -1,0 +1,42 @@
+name: Live deployment verification
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/live-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - name: Verify the deployed application
+        env:
+          BASE_URL: https://br-rough-hat-av3ranyb-escaperoom.compute.c-11.us-east-1.aws.neon.tech
+        run: |
+          python - <<'PY'
+          import urllib.request,urllib.error,json,os,time,re
+          base=os.environ['BASE_URL']
+          def get(path):
+              try:
+                  with urllib.request.urlopen(base+path,timeout=120) as r:return r.status,r.headers.get('content-type',''),r.read()
+              except urllib.error.HTTPError as e:return e.code,e.headers.get('content-type',''),e.read()
+          for attempt in range(5):
+              status,kind,body=get('/api/v1/health')
+              print('HEALTH',attempt,status,body[:1000].decode(errors='replace'),flush=True)
+              if status==200:break
+              time.sleep(10)
+          assert status==200,'Health endpoint failed'
+          status,kind,body=get('/')
+          print('HOME',status,kind,len(body),flush=True)
+          assert status==200 and 'text/html' in kind
+          text=body.decode()
+          for asset in re.findall(r'(?:src|href)="(/assets/[^" ]+)"',text):
+              code,typ,data=get(asset);print('ASSET',asset,code,typ,len(data),flush=True);assert code==200
+          for route in ['/staff/login','/login','/api/v1/public/themes']:
+              status,kind,body=get(route)
+              print('ROUTE',route,status,kind,body[:300].decode(errors='replace'),flush=True)
+              assert status==200
+          print('PUBLIC_DEPLOYMENT_PASS',flush=True)
+          PY
