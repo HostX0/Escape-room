@@ -1,0 +1,42 @@
+name: Publish verified runtime
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-runtime.yml', 'scripts/package-runtime.mjs', 'escape-room-backend/edge-entry.mjs']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: escape_room_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-local-disposable-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:ci-local-disposable-only@localhost:5432/escape_room_test
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --prefix client && npm ci --prefix escape-room-backend
+      - run: npm run build --prefix client
+      - run: npm run fonts --prefix escape-room-backend
+      - run: npm test --prefix escape-room-backend
+      - run: RUN_DB_TESTS=1 node --test escape-room-backend/tests/database.test.js
+      - run: npm prune --omit=dev --prefix escape-room-backend
+      - run: node --check escape-room-backend/edge-entry.mjs && node scripts/package-runtime.mjs
+      - name: Publish immutable code-only deployment artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "runtime-${GITHUB_SHA}" /tmp/escape-release/runtime.json.br /tmp/escape-release/manifest.json --prerelease --title "Verified runtime ${GITHUB_SHA:0:7}" --notes "Code-only runtime, built and tested with Node 24 and PostgreSQL 17. No application credentials, customer data, uploads, signatures or font binaries are included. The deployment loader verifies the SHA256 recorded in manifest.json."
