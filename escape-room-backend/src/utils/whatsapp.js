@@ -44,7 +44,7 @@ async function sendWhatsAppOTP(phone, code) {
       headers: { "Content-Type": "application/json" },
     });
 
-    if (response.data && response.data.sent === "true") {
+    if (response.data && (response.data.sent === "true" || response.data.sent === true)) {
       console.log("[WhatsApp] Verification message accepted by provider");
       return { success: true, error: null };
     }

@@ -1,0 +1,38 @@
+const test=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+process.env.NODE_ENV='production';process.env.DATABASE_URL='postgresql://test@127.0.0.1:1/test';
+process.env.JWT_SECRET=crypto.randomBytes(48).toString('hex');process.env.ADMIN_JWT_SECRET=crypto.randomBytes(48).toString('hex');
+const validators=require('../src/utils/validators'),rules=require('../src/utils/bookingRules'),jwt=require('../src/utils/jwt');
+const {pool}=require('../src/config/db');
+for(const [input,expected] of [[1,1],['23',23],[-1,null],[0,null],['1.2',null],['abc',null],[null,null],[Number.MAX_SAFE_INTEGER+1,null]]) test('integer ID: '+JSON.stringify(input),()=>assert.equal(validators.toInt(input),expected));
+for(const [value,expected] of [['2026-09-20T12:00:00Z',true],['2026-09-20T12:00:00+03:00',true],['2026-09-20',false],['2026-09-20T12:00',false],['anything',false]]) test('explicit datetime: '+value,()=>assert.equal(validators.isISODateTime(value),expected));
+test('Password byte limit matches bcrypt',()=>{assert.equal(validators.isValidPassword('x'.repeat(72)+'A'),false);assert.equal(validators.isValidPassword('GoodPass987'),true);});
+test('Baghdad day begins at 21:00 UTC on previous date',()=>{const [start,end]=rules.dateBounds('2026-09-20');assert.equal(start.toISOString(),'2026-09-19T21:00:00.000Z');assert.equal(end-start,86400000);});
+for(const date of ['2026-02-30','2026-13-01','2026-2-01','foo','2026-09-20T10:00'])test('reject invalid calendar date '+date,()=>assert.throws(()=>rules.dateBounds(date)));
+test('past bookings rejected',()=>assert.throws(()=>rules.futureStart('2020-01-01T10:00:00Z')));
+test('future booking accepted',()=>assert.ok(rules.futureStart(new Date(Date.now()+86400000).toISOString())));
+const primary={full_name:'Test Person',phone:'+9647700000001',is_primary:true};
+test('valid primary participant',()=>assert.equal(rules.participants([primary]).length,1));
+test('duplicate participant phones rejected',()=>assert.throws(()=>rules.participants([primary,{...primary,is_primary:false}]),/duplicated/));
+test('missing primary rejected',()=>assert.throws(()=>rules.participants([{...primary,is_primary:false}])));
+test('extra primary on additions rejected',()=>assert.throws(()=>rules.participants([primary],false)));
+test('over eight participants rejected',()=>assert.throws(()=>rules.participants(Array(9).fill(primary))));
+test('blank participant name rejected',()=>assert.throws(()=>rules.participants([{...primary,full_name:' '}])));
+test('long participant name rejected',()=>assert.throws(()=>rules.participants([{...primary,full_name:'x'.repeat(121)}])));
+test('invalid participant phone rejected',()=>assert.throws(()=>rules.participants([{...primary,phone:'test'}])));
+test('customer token cannot authenticate as staff',()=>assert.throws(()=>jwt.verifyAdminToken(jwt.signUserToken({user_id:1}))));
+test('staff token cannot authenticate as customer',()=>assert.throws(()=>jwt.verifyUserToken(jwt.signAdminToken({staff_id:1,role:'manager'}))))
+test('expired JWT rejected',()=>assert.throws(()=>jwt.verifyUserToken(jwt.signUserToken({user_id:1},{expiresIn:-1}))));
+const {detect}=require('../src/utils/imageType');
+test('SVG upload rejected',()=>assert.equal(detect(Buffer.from('<svg><script>alert(1)</script></svg>')),null));
+test('non-image upload rejected',()=>assert.equal(detect(Buffer.from('this is not an image')),null));
+test('PNG magic detected',()=>assert.equal(detect(Buffer.from([137,80,78,71,13,10,26,10,0,0,0,13])).mime,'image/png'));
+test('test seed refuses weak or missing password',async()=>{const {seed}=require('../scripts/seed-test');await assert.rejects(seed({},'short'));await assert.rejects(seed({},undefined));});
+test('invalid signature returns validation error before SQL',async()=>{const s=require('../src/services/waivers.service');await new Promise(resolve=>s.signWaiver({signature_base64:'data:image/svg+xml;base64,PHN2Zz4='},error=>{assert.equal(error.status,400);resolve();}));});
+test('transaction rolls back and releases after action error',async()=>{const original=pool.connect,calls=[];pool.connect=async()=>({query:async sql=>{calls.push(sql);return {rows:[]}},release:()=>calls.push('release')});try{await assert.rejects(require('../src/utils/transaction').transaction(async()=>{throw Error('expected')}));assert.deepEqual(calls,['BEGIN','ROLLBACK','release']);}finally{pool.connect=original;}});
+test('staff authorization uses the current database role',async()=>{const query=pool.query;pool.query=(_s,_p,cb)=>cb(null,{rows:[{is_active:true,role:'accountant',branch_id:9}]});try{const req={header:()=>`Bearer ${jwt.signAdminToken({staff_id:1,role:'manager'})}`};await new Promise(resolve=>require('../src/middlewares/adminAuth.middleware')(req,{status:()=>{throw Error('unexpected failure')}},resolve));assert.equal(req.staff.role,'accountant');assert.equal(req.staff.branch_id,9);}finally{pool.query=query;}});
+test('production app loads; health and unknown API routes preserve API semantics',async()=>{const query=pool.query;pool.query=(_s,cb)=>cb(null,{rows:[{ok:1}]});const app=require('../src/app');const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));try{const origin=`http://127.0.0.1:${server.address().port}`;const health=await fetch(origin+'/api/v1/health');assert.equal(health.status,200);assert.equal((await health.json()).db,'connected');const missing=await fetch(origin+'/api/v1/not-a-route');assert.equal(missing.status,404);assert.match(missing.headers.get('content-type'),/json/);const privateRoute=await fetch(origin+'/api/v1/bookings/me/bookings');assert.equal(privateRoute.status,401);}finally{pool.query=query;await new Promise(resolve=>server.close(resolve));}});
+
+for(const value of [true,false,[],[1],{},'1e3','0x10'])test('reject noncanonical ID '+JSON.stringify(value),()=>assert.equal(validators.toInt(value),null));
+for(const value of ['2026-02-30T12:00:00Z','2026-11-31T12:00:00+03:00','2026-09-20T24:30:00Z'])test('reject invalid datetime '+value,()=>assert.equal(validators.isISODateTime(value),false));
+for(const value of ['07700000001','+9647700000001','009647700000001','9647700000001','٠٧٧٠٠٠٠٠٠٠١'])test('canonical Iraqi mobile '+value,()=>assert.equal(validators.normalizePhone(value),'+9647700000001'));
+test('phone aliases cannot create duplicate participants',()=>assert.throws(()=>rules.participants([primary,{...primary,phone:'07700000001',is_primary:false}]),/duplicated/));

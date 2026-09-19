@@ -1,0 +1,453 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #0a0a0f;
+    --bg-elevated: #0f0f1a;
+    --bg-subtle: #0a0a0f;
+    --text: #e8eaf0;
+    --muted: #8890a4;
+    --primary: #e11d48;
+    --primary-soft: rgba(225, 29, 72, 0.18);
+    --accent: #f59e0b;
+    --accent-soft: rgba(245, 158, 11, 0.15);
+    --horror-blood: #9f1239;
+    --horror-crimson: #e11d48;
+    --horror-navy: #0f0f1a;
+    --gold: #f59e0b;
+    --gold-soft: rgba(245, 158, 11, 0.12);
+    --brand-red: #e11d48;
+    --brand-glow: rgba(225, 29, 72, 0.4);
+  }
+
+  * {
+    @apply border-slate-700/30;
+  }
+
+  body {
+    @apply antialiased min-h-screen text-slate-100;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 0% 0%, rgba(225, 29, 72, 0.06), transparent),
+      radial-gradient(ellipse 60% 50% at 100% 0%, rgba(225, 29, 72, 0.04), transparent),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(15, 15, 26, 0.5), transparent),
+      radial-gradient(ellipse 70% 50% at 80% 100%, rgba(225, 29, 72, 0.03), transparent),
+      radial-gradient(ellipse 60% 40% at 20% 100%, rgba(159, 18, 57, 0.04), transparent);
+    background-attachment: fixed;
+    color: var(--text);
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  /* Custom scrollbar — sleek dark with red accent */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(10, 10, 15, 0.9);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(225, 29, 72, 0.35);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(225, 29, 72, 0.55);
+  }
+
+  /* Selection color */
+  ::selection {
+    background: rgba(225, 29, 72, 0.3);
+    color: white;
+  }
+}
+
+@layer components {
+  .shell {
+    @apply max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-white/[0.06] shadow-glass backdrop-blur-2xl;
+    background: linear-gradient(135deg, rgba(12,12,20,0.85), rgba(15,15,26,0.75));
+  }
+
+  .panel-hover {
+    @apply panel transition-all duration-300 hover:shadow-card-hover hover:border-white/[0.1];
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-slate-300/80 backdrop-blur-sm;
+  }
+
+  .nav-pill {
+    @apply relative inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200;
+  }
+
+  .nav-pill--active {
+    @apply bg-gradient-to-r from-rose-700 to-rose-600 text-white shadow-glow-red;
+  }
+
+  .nav-pill--ghost {
+    @apply text-slate-400 hover:text-slate-100 hover:bg-white/[0.06];
+  }
+
+  .select-input {
+    @apply w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2.5 text-sm text-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-transparent backdrop-blur-sm;
+  }
+
+  .dashboard-row {
+    @apply rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 flex items-center justify-between gap-3 text-sm transition-all duration-200 hover:border-rose-500/20 hover:bg-white/[0.05];
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-slate-100 via-slate-200 to-slate-300/80;
+  }
+
+  .text-gradient-accent {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-amber-200 to-amber-400;
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500;
+  }
+
+  .text-gradient-brand {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-rose-400 via-red-400 to-rose-500;
+  }
+
+  /* Horror text glow */
+  .text-horror-glow {
+    text-shadow: 0 0 10px rgba(225, 29, 72, 0.4), 0 0 30px rgba(159, 18, 57, 0.2);
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply rounded-xl bg-white/[0.06] animate-pulse;
+  }
+
+  /* Section divider */
+  .section-divider {
+    @apply border-t border-white/[0.06] my-12 md:my-16;
+  }
+
+  /* Fog overlay */
+  .fog-layer {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background:
+      radial-gradient(ellipse 100% 50% at 20% 80%, rgba(225,29,72,0.02), transparent),
+      radial-gradient(ellipse 80% 40% at 80% 20%, rgba(225,29,72,0.02), transparent);
+  }
+
+  /* Geometric red accent on cards (inspired by logo triangles) */
+  .brand-accent-top::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(225,29,72,0.6), transparent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* Angular corner accent (logo triangle style) */
+  .corner-accent::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-left: 40px solid transparent;
+    border-top: 40px solid rgba(225,29,72,0.15);
+    border-radius: 0 12px 0 0;
+  }
+
+  /* Blood drip accent on cards */
+  .blood-drip::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15%;
+    width: 3px;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(225,29,72,0.5), transparent);
+    border-radius: 0 0 50% 50%;
+  }
+
+  .blood-drip::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 25%;
+    width: 2px;
+    height: 14px;
+    background: linear-gradient(to bottom, rgba(225,29,72,0.35), transparent);
+    border-radius: 0 0 50% 50%;
+  }
+
+  /* Mobile menu animation */
+  .mobile-menu-enter {
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Status badge utility */
+  .status-badge {
+    @apply inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full;
+  }
+
+  /* Glass effect — premium glassmorphism */
+  .glass {
+    @apply backdrop-blur-xl border border-white/[0.08];
+    background: linear-gradient(135deg, rgba(12,12,20,0.6), rgba(15,15,26,0.4));
+  }
+
+  .glass-card {
+    @apply rounded-2xl backdrop-blur-xl border border-white/[0.08] shadow-glass;
+    background: linear-gradient(135deg, rgba(12,12,20,0.7), rgba(15,15,26,0.5));
+  }
+
+  /* Gradient divider */
+  .gradient-divider {
+    @apply h-px bg-gradient-to-r from-transparent via-rose-500/20 to-transparent;
+  }
+
+  /* Red accent border glow (matching logo) */
+  .brand-border-glow {
+    box-shadow: 0 0 0 1px rgba(225,29,72,0.15), 0 0 20px rgba(225,29,72,0.05);
+  }
+
+  /* Gold accent border glow */
+  .gold-border-glow {
+    box-shadow: 0 0 0 1px rgba(245,158,11,0.15), 0 0 20px rgba(245,158,11,0.05);
+  }
+
+  /* Shimmer button effect */
+  .btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    animation: btnShimmer 3s ease-in-out infinite;
+  }
+  @keyframes btnShimmer {
+    0% { left: -100%; }
+    50% { left: 150%; }
+    100% { left: 150%; }
+  }
+
+  /* Hero gradient overlay */
+  .hero-gradient {
+    background: linear-gradient(
+      180deg,
+      rgba(10,10,15,0.3) 0%,
+      rgba(10,10,15,0.6) 40%,
+      rgba(10,10,15,0.95) 100%
+    );
+  }
+
+  /* Urgency badge pulse */
+  .urgency-pulse {
+    animation: urgencyPulse 2s ease-in-out infinite;
+  }
+  @keyframes urgencyPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(225,29,72,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(225,29,72,0); }
+  }
+
+  /* Geometric triangle decoration (inspired by logo) */
+  .geo-triangle {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    opacity: 0.06;
+  }
+  .geo-triangle--left {
+    border-width: 0 0 200px 120px;
+    border-color: transparent transparent transparent #e11d48;
+  }
+  .geo-triangle--right {
+    border-width: 200px 120px 0 0;
+    border-color: #e11d48 transparent transparent transparent;
+  }
+
+  /* Animated border effect */
+  .animate-border {
+    background-size: 300% 300%;
+    animation: gradientShift 8s ease-in-out infinite;
+  }
+
+  /* Stats counter card */
+  .stat-card {
+    @apply relative rounded-2xl border border-white/[0.06] p-6 text-center transition-all duration-500 overflow-hidden;
+    background: linear-gradient(135deg, rgba(12,12,20,0.8), rgba(15,15,26,0.6));
+  }
+  .stat-card:hover {
+    border-color: rgba(225,29,72,0.25);
+    box-shadow: 0 0 40px rgba(225,29,72,0.08);
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(225,29,72,0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .stat-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Section header styling */
+  .section-label {
+    @apply inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.25em] text-rose-400/80;
+  }
+
+  .section-title {
+    @apply text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight;
+  }
+
+  /* Red gradient CTA button */
+  .btn-brand {
+    @apply relative inline-flex items-center gap-2.5 rounded-2xl px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 border overflow-hidden;
+    background: linear-gradient(135deg, #e11d48, #be123c, #e11d48);
+    background-size: 200% 200%;
+    border-color: rgba(251,113,133,0.3);
+    box-shadow: 0 8px 32px rgba(225,29,72,0.35), 0 0 0 1px rgba(225,29,72,0.1);
+    animation: gradientShift 4s ease-in-out infinite;
+  }
+  .btn-brand:hover {
+    transform: scale(1.03) translateY(-1px);
+    box-shadow: 0 12px 48px rgba(225,29,72,0.45), 0 0 0 1px rgba(225,29,72,0.2);
+  }
+  .btn-brand:active {
+    transform: scale(0.98);
+  }
+
+  /* Smooth scroll */
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Mobile-specific improvements ── */
+
+  /* Safe area padding for notch phones (iPhone X+) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Minimum touch target size (44px per Apple HIG) */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent auto-zoom on input focus (iOS Safari zooms at <16px) */
+  @media screen and (max-width: 767px) {
+    input[type="text"],
+    input[type="tel"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="search"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Better mobile tap feedback */
+  @media (hover: none) and (pointer: coarse) {
+    button, a, [role="button"] {
+      -webkit-tap-highlight-color: rgba(225, 29, 72, 0.1);
+    }
+  }
+
+  /* Prevent pull-to-refresh interference on mobile */
+  .no-overscroll {
+    overscroll-behavior: none;
+  }
+
+  /* Mobile card horizontal layout */
+  .mobile-card-h {
+    @apply flex flex-row items-stretch;
+  }
+  .mobile-card-h > .mobile-card-img {
+    @apply w-28 sm:w-36 flex-shrink-0;
+  }
+  .mobile-card-h > .mobile-card-body {
+    @apply flex-1 min-w-0 flex flex-col;
+  }
+
+  /* Responsive text that doesn't break on mobile */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Reduce animations on mobile for better performance */
+  @media (max-width: 767px) {
+    *, *::before, *::after {
+      animation-duration: 0.1s !important;
+      animation-delay: 0s !important;
+      transition-duration: 0.15s !important;
+    }
+    .blur-\[120px\], .blur-\[100px\], .blur-\[80px\] {
+      display: none !important;
+    }
+  }
+
+  /* Respect user preference for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Noise texture overlay */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+}
