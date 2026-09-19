@@ -1,0 +1,57 @@
+name: Build and database verification
+on:
+  push:
+    branches: [main, prepared/source]
+    paths-ignore: ['docs/**', '*.md']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: escape_room_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-local-disposable-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:ci-local-disposable-only@localhost:5432/escape_room_test
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked client and backend dependencies
+        run: npm ci --prefix client && npm ci --prefix escape-room-backend
+      - name: Compile TypeScript and build actual frontend
+        run: npm run build --prefix client
+      - name: Download verified rendering fonts
+        run: npm run fonts --prefix escape-room-backend
+      - name: Check backend JavaScript syntax
+        run: find escape-room-backend/src escape-room-backend/scripts api -name '*.js' -exec node --check {} \;
+      - name: Unit and HTTP contract tests
+        run: npm test --prefix escape-room-backend
+      - name: Real PostgreSQL migrations, bookings, payments, authentication and PDF persistence
+        run: RUN_DB_TESTS=1 node --test escape-room-backend/tests/database.test.js
+      - name: Package built frontend without secrets
+        run: |
+          mkdir -p build-output
+          cp -r client/dist build-output/frontend
+          git rev-parse HEAD > build-output/SOURCE_COMMIT.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-build
+          path: build-output
+          retention-days: 7
