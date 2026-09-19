@@ -3,7 +3,7 @@ function errorHandler(err, req, res, _next) {
   const status = err.code === "LIMIT_FILE_SIZE" ? 413 : (err.status || 500);
   const message =
     status >= 500
-      ? "Internal Server Error"
+      ? (err.publicMessage || "Internal Server Error")
       : err.code === "LIMIT_FILE_SIZE" ? "Image exceeds the 2 MB limit" : (err.publicMessage || "An error occurred");
 
   // Always log server errors
