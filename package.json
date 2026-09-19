@@ -1,0 +1,21 @@
+{
+  "name": "escape-room-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix escape-room-backend\" \"npm run dev --prefix client\"",
+    "dev:backend": "npm run dev --prefix escape-room-backend",
+    "dev:client": "npm run dev --prefix client",
+    "install:all": "npm ci --prefix client && npm ci --prefix escape-room-backend",
+    "build": "npm run fonts --prefix escape-room-backend && npm run build --prefix client",
+    "test": "npm test --prefix escape-room-backend",
+    "typecheck": "npm exec --prefix client -- tsc -b client",
+    "db:migrate": "npm run migrate --prefix escape-room-backend",
+    "db:seed:test": "npm run seed:test --prefix escape-room-backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  }
+}
