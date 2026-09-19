@@ -1,0 +1,71 @@
+name: Live browser verification
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/live-browser.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install isolated browser test dependencies
+        run: |
+          mkdir -p /tmp/escape-browser
+          cd /tmp/escape-browser
+          npm init -y >/dev/null
+          npm install playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Open the live application on desktop and mobile
+        env:
+          BASE_URL: https://br-rough-hat-av3ranyb-escaperoom.compute.c-11.us-east-1.aws.neon.tech
+        run: |
+          cd /tmp/escape-browser
+          mkdir -p screenshots
+          cat > check.cjs <<'JS'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true});
+            try {
+              const errors=[];
+              const page=await browser.newPage({viewport:{width:1440,height:1000}});
+              page.on('pageerror',e=>errors.push(e.message));
+              page.on('requestfailed',r=>console.log('REQUEST_FAILED',r.url(),r.failure()?.errorText));
+              const response=await page.goto(process.env.BASE_URL,{waitUntil:'networkidle',timeout:120000});
+              assert.equal(response.status(),200);
+              await page.locator('#root').waitFor();
+              assert.ok((await page.locator('#root').innerText()).length>100,'React content was not rendered');
+              await page.screenshot({path:'screenshots/home-desktop.png',fullPage:true});
+              console.log('HOME_BROWSER_PASS',await page.title());
+              for(const route of ['/staff/login','/login']) {
+                const response=await page.goto(process.env.BASE_URL+route,{waitUntil:'networkidle',timeout:90000});
+                assert.equal(response.status(),200);
+                assert.ok(await page.locator('input[type=password]').count()>0,'Password input missing: '+route);
+                await page.screenshot({path:'screenshots/'+route.replaceAll('/','-')+'.png',fullPage:true});
+                console.log('LOGIN_FORM_PASS',route);
+              }
+              const mobile=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+              mobile.on('pageerror',e=>errors.push(e.message));
+              await mobile.goto(process.env.BASE_URL,{waitUntil:'networkidle',timeout:90000});
+              await mobile.screenshot({path:'screenshots/home-mobile.png',fullPage:true});
+              const dimensions=await mobile.evaluate(()=>({width:innerWidth,content:document.documentElement.scrollWidth}));
+              assert.ok(dimensions.content<=dimensions.width+2,'Mobile horizontal overflow');
+              assert.deepEqual(errors,[],'Uncaught browser JavaScript errors');
+              console.log('MOBILE_BROWSER_PASS',JSON.stringify(dimensions));
+              console.log('LIVE_BROWSER_VERIFIED');
+            } finally {await browser.close();}
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          JS
+          node check.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-browser-screenshots
+          path: /tmp/escape-browser/screenshots
+          retention-days: 3
